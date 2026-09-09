@@ -1,0 +1,16 @@
+{
+  "name": "cgtest",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "testlogin": "node test/login.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "webdriverio": "^9.31.7"
+  }
+}
