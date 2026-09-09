@@ -7,8 +7,9 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "testlogin": "node test/login.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "testlogin": "node login.js",
+    "testaddsighting": "node AddSighting.js",
+    "test": "node AddSighting.js"
   },
   "devDependencies": {
     "webdriverio": "^9.31.7"
