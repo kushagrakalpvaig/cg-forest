@@ -7,9 +7,14 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "testlogin": "node login.js",
-    "testaddsighting": "node AddSighting.js",
-    "test": "node AddSighting.js"
+    "test": "node tests/auth/login.spec.js",
+    "test:auth": "node tests/auth/login.spec.js",
+    "test:sighting": "node tests/help/public-sighting.spec.js",
+    "test:public": "TEST_ROLE=public node tests/help/public-sighting.spec.js",
+    "test:official": "TEST_ROLE=official node tests/animal-sighting/official-sighting.spec.js",
+    "test:collector": "TEST_ROLE=collector node tests/animal-sighting/official-sighting.spec.js",
+    "testlogin": "node tests/auth/login.spec.js",
+    "testaddsighting": "node tests/help/public-sighting.spec.js"
   },
   "devDependencies": {
     "webdriverio": "^9.31.7"
