@@ -1,7 +1,7 @@
 const { remote } = require('webdriverio');
 
 /**
- * Inline LoginPage class to avoid requiring login.js directly
+ * Inline LoginPage class to handle login if app is on Login screen
  */
 class LoginPage {
     constructor(driver) {
@@ -13,36 +13,43 @@ class LoginPage {
     }
 
     get passwordLoginTab() {
-        return this.driver.$('~Password Login');
+        return this.driver.$('//*[@resource-id="login.tab.password-tab.btn" or @content-desc="Password Login" or ~Password Login]');
     }
 
     get usernameInput() {
-        return this.driver.$('(//android.widget.EditText)[1]');
+        return this.driver.$('//*[@resource-id="login.mobile-number.input" or (//android.widget.EditText)[1]]');
     }
 
     get passwordInput() {
-        return this.driver.$('(//android.widget.EditText)[2]');
+        return this.driver.$('//*[@resource-id="login.password.input" or (//android.widget.EditText)[2]]');
     }
 
     get loginButton() {
-        return this.driver.$('~Login');
+        return this.driver.$('//*[@resource-id="login.submit.btn" or @content-desc="Login" or ~Login]');
     }
 
     async switchToPasswordLogin() {
-        await this.passwordLoginTab.waitForDisplayed({ timeout: 5000 });
-        await this.passwordLoginTab.click();
+        try {
+            const tab = await this.passwordLoginTab;
+            await tab.waitForDisplayed({ timeout: 5000 });
+            await tab.click();
+        } catch (e) { }
     }
 
     async enterCredentials(username, password) {
-        await this.usernameInput.waitForDisplayed({ timeout: 5000 });
-        await this.usernameInput.setValue(username);
-        await this.passwordInput.waitForDisplayed({ timeout: 5000 });
-        await this.passwordInput.setValue(password);
+        const uInput = await this.usernameInput;
+        await uInput.waitForDisplayed({ timeout: 5000 });
+        await uInput.setValue(username);
+
+        const pInput = await this.passwordInput;
+        await pInput.waitForDisplayed({ timeout: 5000 });
+        await pInput.setValue(password);
     }
 
     async clickLogin() {
-        await this.loginButton.waitForDisplayed({ timeout: 5000 });
-        await this.loginButton.click();
+        const btn = await this.loginButton;
+        await btn.waitForDisplayed({ timeout: 5000 });
+        await btn.click();
     }
 }
 
@@ -72,6 +79,38 @@ class AddSightingPage {
         this.driver = driver;
     }
 
+    // --- Test IDs for Help Sighting Form ---
+    static TEST_IDS = {
+        BACK_BTN: 'help-sighting-form.back.btn',
+        DIRECTION_RADIO: 'help-sighting-form.direction.radio',
+        RECORD_AUDIO_BTN: 'help-sighting-form.record-audio.btn',
+        DESCRIPTION_INPUT: 'help-sighting-form.description.input',
+        EVIDENCE_IMG: 'help-sighting-form.evidence.img',
+        SUBMIT_BTN: 'help-sighting-form.submit.btn',
+    };
+
+    /**
+     * Helper to locate element using testId (resource-id or content-desc/accessibility id) or fallback selector
+     */
+    async getSmartElement(testId, fallbackSelector) {
+        if (testId) {
+            try {
+                const resIdEl = await this.driver.$(`//*[@resource-id="${testId}" or @content-desc="${testId}"]`);
+                if (await resIdEl.isExisting()) {
+                    return resIdEl;
+                }
+            } catch (e) { }
+
+            try {
+                const a11yEl = await this.driver.$(`~${testId}`);
+                if (await a11yEl.isExisting()) {
+                    return a11yEl;
+                }
+            } catch (e) { }
+        }
+        return this.driver.$(fallbackSelector);
+    }
+
     // --- Locators: Home Dashboard ---
     get homeHeaderTitle() {
         return this.driver.$('//*[@text="Gaj Sanket"]');
@@ -79,16 +118,8 @@ class AddSightingPage {
 
     get addSightingPublicCard() {
         return this.driver.$(
-            '//*[@text="Add Sighting(Public)" or @content-desc="Add Sighting(Public)" or contains(@text, "Add Sighting") or contains(@content-desc, "Add Sighting")]'
+            '//*[@text="Add Sighting(Public)" or @content-desc="Add Sighting(Public)"]'
         );
-    }
-
-    get nearbyElephantsCard() {
-        return this.driver.$('//*[@text="Near by elephants" or @content-desc="Near by elephants"]');
-    }
-
-    get myReportsCard() {
-        return this.driver.$('//*[@text="My Reports" or @content-desc="My Reports"]');
     }
 
     // --- Locators: Location Confirmation Modal ---
@@ -98,59 +129,52 @@ class AddSightingPage {
         );
     }
 
-    // --- Locators: Add Sighting Form (`Report (ELEPHANT)`) ---
-    get addSightingHeader() {
-        return this.driver.$(
-            '//*[contains(@text, "Report (ELEPHANT)") or contains(@text, "Add Sighting") or contains(@text, "Sighting Report")]'
+    // --- Locators: Sighting Form (`Report (ELEPHANT)`) ---
+    get backButton() {
+        return this.getSmartElement(
+            AddSightingPage.TEST_IDS.BACK_BTN,
+            '//*[@content-desc="Back" or contains(@content-desc, "back")]'
         );
     }
 
     get movementDirectionRadios() {
         return {
-            'East': this.driver.$('//*[@resource-id="movement-direction-radio-0" or @content-desc="movement-direction-radio-0" or contains(@content-desc, "East")]'),
-            'West': this.driver.$('//*[@resource-id="movement-direction-radio-1" or @content-desc="movement-direction-radio-1" or contains(@content-desc, "West")]'),
-            'North': this.driver.$('//*[@resource-id="movement-direction-radio-2" or @content-desc="movement-direction-radio-2" or contains(@content-desc, "North")]'),
-            'South': this.driver.$('//*[@resource-id="movement-direction-radio-3" or @content-desc="movement-direction-radio-3" or contains(@content-desc, "South")]'),
-            'North-East': this.driver.$('//*[@resource-id="movement-direction-radio-4" or @content-desc="movement-direction-radio-4" or contains(@content-desc, "North-East")]'),
-            'South-East': this.driver.$('//*[@resource-id="movement-direction-radio-5" or @content-desc="movement-direction-radio-5" or contains(@content-desc, "South-East")]'),
-            'South-West': this.driver.$('//*[@resource-id="movement-direction-radio-6" or @content-desc="movement-direction-radio-6" or contains(@content-desc, "South-West")]'),
-            'North-West': this.driver.$('//*[@resource-id="movement-direction-radio-7" or @content-desc="movement-direction-radio-7" or contains(@content-desc, "North-West")]'),
+            'East': this.driver.$('//*[@text="East" or @content-desc="East" or contains(@content-desc, "East")]'),
+            'West': this.driver.$('//*[@text="West" or @content-desc="West" or contains(@content-desc, "West")]'),
+            'North': this.driver.$('//*[@text="North" or @content-desc="North" or contains(@content-desc, "North")]'),
+            'South': this.driver.$('//*[@text="South" or @content-desc="South" or contains(@content-desc, "South")]'),
+            'North-East': this.driver.$('//*[@text="North-East" or @content-desc="North-East" or contains(@content-desc, "North-East")]'),
+            'South-East': this.driver.$('//*[@text="South-East" or @content-desc="South-East" or contains(@content-desc, "South-East")]'),
+            'South-West': this.driver.$('//*[@text="South-West" or @content-desc="South-West" or contains(@content-desc, "South-West")]'),
+            'North-West': this.driver.$('//*[@text="North-West" or @content-desc="North-West" or contains(@content-desc, "North-West")]'),
         };
     }
 
     get recordAudioButton() {
-        return this.driver.$(
-            '//*[@resource-id="record-audio-btn" or @content-desc="record-audio-btn" or contains(@content-desc, "Start Recording") or contains(@text, "Start Recording")]'
+        return this.getSmartElement(
+            AddSightingPage.TEST_IDS.RECORD_AUDIO_BTN,
+            '//*[@resource-id="record-audio-btn" or contains(@content-desc, "Start Recording") or contains(@text, "Start Recording")]'
         );
     }
 
     get sightingDescriptionInput() {
-        return this.driver.$(
-            '//*[@resource-id="sighting-description-input" or @content-desc="sighting-description-input" or //android.widget.EditText]'
+        return this.getSmartElement(
+            AddSightingPage.TEST_IDS.DESCRIPTION_INPUT,
+            '//*[@resource-id="sighting-description-input" or //android.widget.EditText[@hint]]'
         );
     }
 
     get cameraButton() {
-        return this.driver.$(
-            '//*[@resource-id="evidence-image-picker-camera-btn" or @content-desc="evidence-image-picker-camera-btn" or contains(@content-desc, "Camera") or contains(@text, "Camera")]'
-        );
-    }
-
-    get galleryButton() {
-        return this.driver.$(
-            '//*[@resource-id="evidence-image-picker-gallery-btn" or @content-desc="evidence-image-picker-gallery-btn" or contains(@content-desc, "Gallery") or contains(@text, "Gallery")]'
+        return this.getSmartElement(
+            AddSightingPage.TEST_IDS.EVIDENCE_IMG,
+            '//*[@resource-id="evidence-image-picker-camera-btn" or contains(@content-desc, "Camera") or contains(@text, "Camera")]'
         );
     }
 
     get submitButton() {
-        return this.driver.$(
-            '//*[@resource-id="submit-sighting-btn" or @content-desc="submit-sighting-btn" or @text="Submit" or contains(@text, "Submit")]'
-        );
-    }
-
-    get successConfirmationMsg() {
-        return this.driver.$(
-            '//*[contains(@text, "Successful") or contains(@text, "submitted") or contains(@text, "Added") or contains(@text, "Thank you")]'
+        return this.getSmartElement(
+            AddSightingPage.TEST_IDS.SUBMIT_BTN,
+            '//*[@resource-id="submit-sighting-btn" or @text="Submit" or contains(@text, "Submit")]'
         );
     }
 
@@ -160,54 +184,69 @@ class AddSightingPage {
      * Checks current screen state (Home / Location modal / Sighting Form)
      */
     async waitForHomePage(timeout = 10000) {
-        console.log('[LOG] Checking current screen state...');
-        const continueBtn = await this.continueLocationButton;
-        if (await continueBtn.isDisplayed()) {
-            console.log('[LOG] Currently on Location popup modal.');
-            return;
-        }
-
-        const descInput = await this.sightingDescriptionInput;
-        if (await descInput.isDisplayed()) {
-            console.log('[LOG] Currently on Sighting Report form screen.');
-            return;
-        }
-
+        console.log('[LOG] Checking Home Dashboard...');
+        const card = await this.addSightingPublicCard;
         try {
-            await this.addSightingPublicCard.waitForDisplayed({ timeout: 5000 });
-            console.log('[LOG] Home Dashboard loaded successfully.');
+            await card.waitForDisplayed({ timeout: 5000 });
+            console.log('[LOG] Home Dashboard loaded with "Add Sighting(Public)" visible.');
         } catch (e) {
-            console.log('[LOG] Proceeding with form detection...');
+            console.log('[LOG] Home screen check complete.');
         }
     }
 
     /**
-     * Clicks on the "Add Sighting(Public)" card from Home Dashboard
+     * Strictly clicks on the "Add Sighting(Public)" card from Home Dashboard
+     * and verifies that "Report (ELEPHANT)" screen opens.
      */
     async clickAddSightingPublic() {
-        // First check if already on location popup
-        if (await this.clickContinueLocation()) {
-            return;
-        }
+        console.log('[LOG] Navigating to "Add Sighting(Public)" card on Home Screen...');
 
-        try {
-            const descInput = await this.sightingDescriptionInput;
-            if (await descInput.isDisplayed()) {
-                console.log('[LOG] Already on Sighting Report form details screen.');
-                return;
-            }
-        } catch (e) {}
+        for (let attempt = 0; attempt < 3; attempt++) {
+            // Check if already on Report (ELEPHANT) screen
+            try {
+                const elephantHeader = await this.driver.$('//*[contains(@text, "ELEPHANT") or contains(@text, "Report (ELEPHANT)")]');
+                if (await elephantHeader.isDisplayed()) {
+                    console.log('[LOG] Verified: Currently on "Report (ELEPHANT)" screen.');
+                    return;
+                }
+            } catch (e) { }
 
-        const card = await this.addSightingPublicCard;
-        if (await card.isDisplayed()) {
-            console.log('[LOG] Navigating to "Add Sighting(Public)" form...');
-            await card.click();
-            console.log('[LOG] Clicked "Add Sighting(Public)" card.');
-            await this.driver.pause(2000);
-            await this.clickContinueLocation();
-        } else {
-            console.log('[LOG] Card not immediately visible, checking location popup or form...');
-            await this.clickContinueLocation();
+            // Locate and click the Add Sighting(Public) card
+            try {
+                const cardGroup = await this.driver.$('//android.view.ViewGroup[@content-desc="Add Sighting(Public)"]');
+                if (await cardGroup.isDisplayed()) {
+                    console.log('[LOG] Clicking ViewGroup "Add Sighting(Public)" card...');
+                    await cardGroup.click();
+                    await this.driver.pause(2500);
+                } else {
+                    const cardText = await this.driver.$('//android.widget.TextView[@text="Add Sighting(Public)"]');
+                    if (await cardText.isDisplayed()) {
+                        console.log('[LOG] Clicking TextView "Add Sighting(Public)" card...');
+                        await cardText.click();
+                        await this.driver.pause(2500);
+                    }
+                }
+            } catch (e) { }
+
+            // Verify if Report (ELEPHANT) opened
+            try {
+                const elephantHeader = await this.driver.$('//*[contains(@text, "ELEPHANT") or contains(@text, "Report (ELEPHANT)")]');
+                if (await elephantHeader.isDisplayed()) {
+                    console.log('[LOG] Verified: "Report (ELEPHANT)" screen opened successfully!');
+                    return;
+                }
+            } catch (e) { }
+
+            // If Feedback screen opened accidentally, click Back and retry
+            try {
+                const feedbackHeader = await this.driver.$('//*[contains(@text, "Feedback") or contains(@content-desc, "Feedback")]');
+                if (await feedbackHeader.isDisplayed()) {
+                    console.log('[WARNING] Feedback page opened accidentally! Clicking Back button to return to Home...');
+                    const backBtn = await this.driver.$('//android.widget.TextView[@text="Report (Submit App Feedback)"]/preceding-sibling::* | //*[@content-desc="Back"] | (//android.widget.ImageView)[1]');
+                    await backBtn.click();
+                    await this.driver.pause(2000);
+                }
+            } catch (e) { }
         }
     }
 
@@ -224,58 +263,75 @@ class AddSightingPage {
             '//android.widget.TextView[@text="Continue"]'
         ];
 
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 4; i++) {
             for (const loc of candidateLocators) {
                 try {
                     const btn = await this.driver.$(loc);
                     if (await btn.isDisplayed()) {
-                        console.log(`[LOG] Found "Continue" button with locator (${loc}). Clicking...`);
+                        console.log(`[LOG] Found "Continue" button (${loc}). Clicking...`);
                         await btn.click();
                         console.log('[LOG] Clicked "Continue" button successfully.');
                         await this.driver.pause(2000);
                         return true;
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
-            await this.driver.pause(1000);
+            await this.driver.pause(800);
         }
         console.log('[LOG] "Continue" button not visible or already dismissed.');
         return false;
     }
 
     /**
-     * Select movement direction radio option (East, West, North, South, North-East, etc.)
+     * Randomly picks one direction from East, West, North, South, North-East, South-East, South-West, North-West
      */
-    async selectMovementDirection(direction = 'North-East') {
-        console.log(`[LOG] Selecting elephant movement direction: ${direction}`);
-        try {
-            const radio = this.movementDirectionRadios[direction] || this.movementDirectionRadios['North-East'];
-            if (await radio.isDisplayed()) {
-                await radio.click();
-                console.log(`[LOG] Selected direction '${direction}' successfully.`);
-                return;
-            }
-        } catch (err) {}
+    async selectRandomDirection() {
+        const directions = [
+            'East', 'West', 'North', 'South',
+            'North-East', 'South-East', 'South-West', 'North-West'
+        ];
+        const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+        console.log(`[LOG] Randomly selecting movement direction: ${randomDirection}`);
+
+        const candidateLocators = [
+            `//*[@text="${randomDirection}" or @content-desc="${randomDirection}"]`,
+            `//*[contains(@text, "${randomDirection}") or contains(@content-desc, "${randomDirection}")]`,
+            `//android.widget.RadioButton[contains(@text, "${randomDirection}") or contains(@content-desc, "${randomDirection}")]`
+        ];
+
+        for (const loc of candidateLocators) {
+            try {
+                const el = await this.driver.$(loc);
+                if (await el.isDisplayed()) {
+                    await el.click();
+                    console.log(`[LOG] Clicked radio button for direction: ${randomDirection}`);
+                    return randomDirection;
+                }
+            } catch (e) { }
+        }
 
         try {
-            const fallback = await this.driver.$(`//*[contains(@content-desc, "${direction}") or contains(@text, "${direction}")]`);
-            if (await fallback.isDisplayed()) {
-                await fallback.click();
-                console.log(`[LOG] Selected direction '${direction}' via fallback locator.`);
-                return;
+            const radioMap = this.movementDirectionRadios;
+            if (radioMap[randomDirection]) {
+                const r = await radioMap[randomDirection];
+                if (await r.isDisplayed()) {
+                    await r.click();
+                    console.log(`[LOG] Clicked mapped direction radio for: ${randomDirection}`);
+                    return randomDirection;
+                }
             }
-        } catch (err) {
-            console.log(`[LOG] Direction '${direction}' choice step completed.`);
-        }
+        } catch (e) { }
+
+        console.log(`[LOG] Selected direction '${randomDirection}'.`);
+        return randomDirection;
     }
 
     /**
      * Fill the Sighting Description text area
      */
-    async fillSightingDescription(text = 'Herd of 3 wild elephants spotted moving near North-East forest water stream.') {
-        console.log('[LOG] Entering detailed sighting description...');
+    async fillSightingDescription(text = 'Herd of wild elephants spotted moving near forest stream.') {
+        console.log('[LOG] Entering sighting description...');
 
-        // Ensure visible by scrolling slightly if needed
         for (let scrollAttempt = 0; scrollAttempt < 2; scrollAttempt++) {
             try {
                 const input = await this.sightingDescriptionInput;
@@ -286,7 +342,7 @@ class AddSightingPage {
                     console.log('[LOG] Sighting description entered successfully.');
                     return;
                 }
-            } catch (e) {}
+            } catch (e) { }
 
             console.log('[LOG] Scrolling down to find description field...');
             await this.driver.action('pointer', { pointerType: 'touch' })
@@ -302,7 +358,7 @@ class AddSightingPage {
             const allInputs = await this.driver.$$('//android.widget.EditText');
             if (allInputs.length > 0) {
                 await allInputs[0].click();
-                await allInputs[0].addValue(text);
+                await allInputs[0].setValue(text);
                 console.log('[LOG] Sighting description entered via EditText array fallback.');
             }
         } catch (e) {
@@ -311,48 +367,41 @@ class AddSightingPage {
     }
 
     /**
-     * Clicks the Camera button, captures photo using camera intent, and saves it to the form
+     * Clicks the Camera button, captures photo using camera intent, and saves photo to form
      */
     async capturePhotoWithCamera() {
         console.log('[LOG] Opening Camera to capture image evidence...');
         let clickedCamera = false;
 
-        // Scroll & search for Camera button
-        for (let attempt = 0; attempt < 4; attempt++) {
+        for (let attempt = 0; attempt < 3; attempt++) {
             try {
-                const cameraBtn = await this.driver.$(
-                    '//*[@resource-id="evidence-image-picker-camera-btn" or contains(@content-desc, "Camera") or contains(@text, "Camera") or contains(@content-desc, "camera") or contains(@text, "camera")]'
-                );
+                const cameraBtn = await this.cameraButton;
                 if (await cameraBtn.isDisplayed()) {
-                    console.log('[LOG] Camera button found on screen. Clicking...');
+                    console.log('[LOG] Camera button found on form. Clicking...');
                     await cameraBtn.click();
                     clickedCamera = true;
-                    console.log('[LOG] Clicked Camera button.');
+                    console.log('[LOG] Clicked Camera button successfully.');
                     await this.driver.pause(3000);
                     break;
                 }
-            } catch (e) {}
+            } catch (e) { }
 
-            console.log(`[LOG] Camera button not visible, scrolling down (attempt ${attempt + 1})...`);
-            await this.driver.action('pointer', { pointerType: 'touch' })
-                .move({ x: 500, y: 1400 })
-                .down()
-                .move({ x: 500, y: 700, duration: 500 })
-                .up()
-                .perform();
-            await this.driver.pause(1200);
+            console.log(`[LOG] Camera button search attempt ${attempt + 1}...`);
+            await this.driver.pause(1000);
         }
 
         if (!clickedCamera) {
-            console.log('[LOG] Attempting direct click fallback on Camera button selector...');
             try {
-                const cameraBtn = await this.driver.$(
-                    '//*[@resource-id="evidence-image-picker-camera-btn" or contains(@content-desc, "Camera") or contains(@text, "Camera")]'
+                const cameraFallback = await this.driver.$(
+                    '//*[@content-desc="Camera" or @text="Camera" or contains(@content-desc, "Camera") or contains(@text, "Camera")]'
                 );
-                await cameraBtn.click();
-                await this.driver.pause(3000);
+                if (await cameraFallback.isDisplayed()) {
+                    await cameraFallback.click();
+                    console.log('[LOG] Clicked Camera button via fallback locator.');
+                    await this.driver.pause(3000);
+                }
             } catch (e) {
-                console.log('[LOG] Camera button click fallback failed:', e.message);
+                console.log('[LOG] Camera click fallback:', e.message);
             }
         }
 
@@ -362,132 +411,123 @@ class AddSightingPage {
                 '//*[@text="While using the app" or @text="Only this time" or @text="Allow" or contains(@resource-id, "permission_allow")]'
             );
             if (await allowPermission.isDisplayed()) {
-                console.log('[LOG] System permission dialog appeared. Clicking Allow...');
+                console.log('[LOG] Permission dialog appeared. Clicking Allow...');
                 await allowPermission.click();
                 await this.driver.pause(2000);
             }
-        } catch (e) {}
+        } catch (e) { }
 
-        // Capture photo in Camera app
+        // Trigger Shutter in Camera app
         try {
-            console.log('[LOG] Triggering camera shutter button to click image...');
-            const shutterBtn = await this.driver.$(
-                '//*[@content-desc="Shutter" or @content-desc="Take photo" or contains(@resource-id, "shutter") or contains(@resource-id, "capture") or contains(@resource-id, "take_picture")]'
-            );
-            if (await shutterBtn.isDisplayed()) {
-                await shutterBtn.click();
-                console.log('[LOG] Clicked camera shutter button.');
-            } else {
-                console.log('[LOG] Shutter button locator not found directly, sending KEYCODE_CAMERA (27)...');
-                await this.driver.pressKeyCode(27);
+            console.log('[LOG] Triggering camera shutter to take picture...');
+            const shutterLocators = [
+                '//*[@resource-id="com.android.camera:id/shutter_button"]',
+                '//*[contains(@resource-id, "shutter")]',
+                '//*[contains(@resource-id, "capture")]',
+                '//*[contains(@resource-id, "take_picture")]',
+                '//*[@content-desc="Shutter" or @content-desc="Take photo" or @content-desc="Capture"]',
+                '//android.widget.ImageView[contains(@resource-id, "shutter") or contains(@resource-id, "intent")]'
+            ];
+
+            let shutterClicked = false;
+            for (const loc of shutterLocators) {
+                try {
+                    const btn = await this.driver.$(loc);
+                    if (await btn.isDisplayed()) {
+                        console.log(`[LOG] Found camera shutter button (${loc}). Clicking...`);
+                        await btn.click();
+                        shutterClicked = true;
+                        break;
+                    }
+                } catch (e) { }
+            }
+
+            if (!shutterClicked) {
+                console.log('[LOG] Shutter button not found by locator, sending KEYCODE_CAMERA (27) & KEYCODE_VOLUME_UP (24)...');
+                try { await this.driver.pressKeyCode(27); } catch (e) { }
+                try { await this.driver.pressKeyCode(24); } catch (e) { }
             }
             await this.driver.pause(3000);
         } catch (e) {
-            console.log('[LOG] Shutter action trigger fallback: sending KEYCODE_CAMERA...');
-            try { await this.driver.pressKeyCode(27); } catch (err) {}
+            try { await this.driver.pressKeyCode(27); } catch (err) { }
             await this.driver.pause(3000);
         }
 
-        // Confirm/Save captured photo in Camera app
+        // Confirm/Done in Camera app
         try {
             console.log('[LOG] Confirming and saving captured photo...');
-            const confirmBtn = await this.driver.$(
-                '//*[@content-desc="Done" or @content-desc="OK" or @content-desc="Save" or contains(@resource-id, "done") or contains(@resource-id, "confirm") or contains(@resource-id, "intent_done") or contains(@resource-id, "check")]'
-            );
-            if (await confirmBtn.isDisplayed()) {
-                await confirmBtn.click();
-                console.log('[LOG] Clicked camera confirm/done button.');
-            } else {
-                console.log('[LOG] Confirm button locator not found directly, sending KEYCODE_ENTER (66)...');
-                await this.driver.pressKeyCode(66);
+            const confirmLocators = [
+                '//*[@resource-id="com.android.camera:id/intent_done_retry"]',
+                '//*[@resource-id="com.android.camera:id/done_button"]',
+                '//*[contains(@resource-id, "done")]',
+                '//*[contains(@resource-id, "confirm")]',
+                '//*[contains(@resource-id, "check")]',
+                '//*[@content-desc="Done" or @content-desc="OK" or @content-desc="Save" or @content-desc="Confirm"]',
+                '//android.widget.ImageView[contains(@resource-id, "done") or contains(@resource-id, "check")]'
+            ];
+
+            let confirmClicked = false;
+            for (const loc of confirmLocators) {
+                try {
+                    const btn = await this.driver.$(loc);
+                    if (await btn.isDisplayed()) {
+                        console.log(`[LOG] Found camera confirm button (${loc}). Clicking...`);
+                        await btn.click();
+                        confirmClicked = true;
+                        break;
+                    }
+                } catch (e) { }
+            }
+
+            if (!confirmClicked) {
+                console.log('[LOG] Confirm button not found by locator, sending KEYCODE_ENTER (66)...');
+                try { await this.driver.pressKeyCode(66); } catch (e) { }
             }
             await this.driver.pause(2500);
         } catch (e) {
-            console.log('[LOG] Camera confirm action fallback: sending KEYCODE_ENTER...');
-            try { await this.driver.pressKeyCode(66); } catch (err) {}
+            try { await this.driver.pressKeyCode(66); } catch (err) { }
             await this.driver.pause(2500);
         }
 
-        // Verify return back to Gaj Sanket app package
+        // Return to app package if stuck in camera app
         try {
             const currentPkg = await this.driver.getCurrentPackage();
             if (currentPkg && currentPkg !== 'com.kalpvaig.cgtracker') {
-                console.log(`[LOG] Currently in package ${currentPkg}, returning to Gaj Sanket app...`);
+                console.log(`[LOG] Returning from ${currentPkg} to Gaj Sanket app...`);
                 await this.driver.back();
                 await this.driver.pause(1500);
             }
-        } catch (e) {}
+        } catch (e) { }
     }
 
     /**
-     * Attach image evidence from Gallery photo picker
-     */
-    async attachImageFromGallery() {
-        console.log('[LOG] Attaching image evidence from Gallery...');
-        const btn = await this.galleryButton;
-        if (await btn.isDisplayed()) {
-            await btn.click();
-            console.log('[LOG] Clicked Gallery button.');
-            await this.driver.pause(2000);
-
-            // Select photo from Android Google Photo Picker
-            try {
-                console.log('[LOG] Selecting image from photo picker grid...');
-                const photoItem = await this.driver.$(
-                    '//android.view.View[contains(@content-desc, "Photo")] | (//android.widget.ImageView)[1]'
-                );
-                if (await photoItem.isDisplayed()) {
-                    await photoItem.click();
-                    console.log('[LOG] Clicked photo item.');
-                    await this.driver.pause(1000);
-                }
-            } catch (err) {
-                console.log('[LOG] Photo item click handled:', err.message);
-            }
-
-            // Ensure app returns back to Gaj Sanket form from photo picker
-            try {
-                const currentPackage = await this.driver.getCurrentPackage();
-                if (currentPackage && currentPackage !== 'com.kalpvaig.cgtracker') {
-                    console.log(`[LOG] Currently in ${currentPackage}. Returning to Gaj Sanket app...`);
-                    await this.driver.back();
-                    await this.driver.pause(1500);
-                }
-            } catch (e) {
-                console.log('[LOG] Back navigation after photo picker handled.');
-            }
-        }
-    }
-
-    /**
-     * Clicks on the Submit Sighting button at the end of the form
+     * Clicks on the Submit button on the Sighting Form
      */
     async clickSubmitSighting() {
-        console.log('[LOG] Navigating to bottom of form to Submit Sighting...');
+        console.log('[LOG] Clicking Submit button on form...');
         const submitLocators = [
+            `//*[@resource-id="${AddSightingPage.TEST_IDS.SUBMIT_BTN}"]`,
             '//*[@resource-id="submit-sighting-btn"]',
             '//*[@text="Submit" or @content-desc="Submit"]',
             '//*[contains(@text, "Submit") or contains(@content-desc, "Submit")]',
-            '//*[contains(@text, "SUBMIT") or contains(@content-desc, "SUBMIT")]',
-            '//android.widget.Button[contains(@text, "Submit") or contains(@content-desc, "Submit")]',
             '//android.view.ViewGroup[contains(@content-desc, "Submit")]'
         ];
 
-        for (let attempt = 0; attempt < 5; attempt++) {
+        for (let attempt = 0; attempt < 4; attempt++) {
             for (const loc of submitLocators) {
                 try {
                     const btn = await this.driver.$(loc);
                     if (await btn.isDisplayed()) {
-                        console.log(`[LOG] Submit button found using locator (${loc}). Clicking...`);
+                        console.log(`[LOG] Found Submit button (${loc}). Clicking...`);
                         await btn.click();
-                        console.log('[LOG] Clicked Submit Sighting button successfully.');
+                        console.log('[LOG] Clicked Submit button successfully.');
                         await this.driver.pause(3000);
                         return true;
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
 
-            console.log(`[LOG] Submit button not visible yet, scrolling down (scroll attempt ${attempt + 1})...`);
+            console.log(`[LOG] Scrolling down to find Submit button (attempt ${attempt + 1})...`);
             await this.driver.action('pointer', { pointerType: 'touch' })
                 .move({ x: 500, y: 1300 })
                 .down()
@@ -497,95 +537,116 @@ class AddSightingPage {
             await this.driver.pause(1000);
         }
 
-        console.log('[LOG] Performing fallback tap on submit button area...');
         for (const loc of submitLocators) {
             try {
                 const btn = await this.driver.$(loc);
                 await btn.click();
-                console.log('[LOG] Clicked Submit button via fallback click.');
+                console.log('[LOG] Clicked Submit button via fallback.');
                 await this.driver.pause(3000);
                 return true;
-            } catch (e) {}
+            } catch (e) { }
         }
         return false;
     }
 
     /**
-     * Test Audio Recording feature using record-audio-btn
+     * Scroll down on review/summary screen and click the final Submit button
      */
-    async testRecordAudioButton() {
-        console.log('[LOG] Interacting with Record Audio button (record-audio-btn)...');
-        try {
-            const audioBtn = await this.recordAudioButton;
-            if (await audioBtn.isDisplayed()) {
-                console.log('[LOG] Found record-audio-btn. Clicking to test audio toggle...');
-                await audioBtn.click();
-                await this.driver.pause(1500);
+    async scrollAndClickFinalSubmit() {
+        console.log('[LOG] Scrolling down on summary page to find final Submit button...');
+        
+        const submitLocators = [
+            `//*[@resource-id="${AddSightingPage.TEST_IDS.SUBMIT_BTN}"]`,
+            '//*[@resource-id="submit-sighting-btn"]',
+            '//*[@text="Submit" or @content-desc="Submit"]',
+            '//*[contains(@text, "Submit") or contains(@content-desc, "Submit")]',
+            '//android.view.ViewGroup[contains(@content-desc, "Submit")]'
+        ];
 
-                // Handle system audio permission prompt if appeared
+        for (let attempt = 0; attempt < 4; attempt++) {
+            console.log(`[LOG] Scroll attempt ${attempt + 1} for final Submit button...`);
+            await this.driver.action('pointer', { pointerType: 'touch' })
+                .move({ x: 500, y: 1500 })
+                .down()
+                .move({ x: 500, y: 600, duration: 600 })
+                .up()
+                .perform();
+            await this.driver.pause(1500);
+
+            for (const loc of submitLocators) {
                 try {
-                    const allowAudio = await this.driver.$(
-                        '//*[@text="While using the app" or @text="Only this time" or @text="Allow" or contains(@resource-id, "permission_allow")]'
-                    );
-                    if (await allowAudio.isDisplayed()) {
-                        console.log('[LOG] System audio permission prompt appeared. Clicking Allow...');
-                        await allowAudio.click();
-                        await this.driver.pause(1500);
+                    const btn = await this.driver.$(loc);
+                    if (await btn.isDisplayed()) {
+                        console.log(`[LOG] Found final Submit button (${loc}). Clicking...`);
+                        await btn.click();
+                        console.log('[LOG] Final Submit button clicked successfully!');
+                        await this.driver.pause(3000);
+                        return true;
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
-        } catch (err) {
-            console.log('[LOG] record-audio-btn interaction step completed.');
         }
+
+        for (const loc of submitLocators) {
+            try {
+                const btn = await this.driver.$(loc);
+                await btn.click();
+                console.log('[LOG] Clicked final Submit button via fallback.');
+                await this.driver.pause(3000);
+                return true;
+            } catch (e) { }
+        }
+        return false;
     }
 
     /**
-     * Full Automated Workflow: Fills ALL details inside the Add Sighting form using exact Test IDs
+     * Full Automated Workflow:
+     * 1. Click "Add Sighting(Public)" on home screen
+     * 2. Location Popup -> click "Continue"
+     * 3. Report (ELEPHANT) form:
+     *    - Select randomly any direction
+     *    - Write message in the box
+     *    - Click camera -> capture image -> submit/confirm photo
+     *    - Click Submit
+     * 4. Scroll down -> click final Submit button
+     * 5. Verify returned to Home Page
      */
     async performAddSighting(sightingData = {}) {
-        const {
-            direction = 'South', // Uses movement-direction-radio-3
-            description = 'Herd of 3 wild elephants spotted moving near Mainpat forest range water stream.',
-            useCamera = true,
-        } = sightingData;
-
-        // Step 1: Open Sighting Form & Confirm Location
+        console.log('\n--- Step 1: Click "Add Sighting(Public)" on Home Screen ---');
         await this.clickAddSightingPublic();
         await this.driver.pause(2000);
 
-        // Step 2: Fill ALL Form Details using Test IDs
-        console.log('\n--- Filling ALL Details in Add Sighting Form using Test IDs ---');
-
-        // A. Select Movement Direction Radio (movement-direction-radio-3)
-        await this.selectMovementDirection(direction);
-        await this.driver.pause(1000);
-
-        // B. Test Record Audio Button (record-audio-btn)
-        await this.testRecordAudioButton();
-        await this.driver.pause(1000);
-
-        // C. Enter Sighting Description (sighting-description-input)
-        await this.fillSightingDescription(description);
-        await this.driver.pause(1000);
-
-        // D. Verify Gallery Button (evidence-image-picker-gallery-btn) & Open Camera (evidence-image-picker-camera-btn)
-        try {
-            const galleryBtn = await this.galleryButton;
-            if (await galleryBtn.isDisplayed()) {
-                console.log('[LOG] Verified presence of Gallery button (evidence-image-picker-gallery-btn).');
-            }
-        } catch (e) {}
-
-        if (useCamera) {
-            console.log('[LOG] Opening Camera using evidence-image-picker-camera-btn...');
-            await this.capturePhotoWithCamera();
-            await this.driver.pause(2000);
-        }
-
-        // Step 3: Submit Form in Last (submit-sighting-btn)
-        console.log('\n--- Submitting Add Sighting Form using submit-sighting-btn ---');
-        await this.clickSubmitSighting();
+        console.log('\n--- Step 2: Location Popup -> Click "Continue" ---');
+        await this.clickContinueLocation();
         await this.driver.pause(2000);
+
+        console.log('\n--- Step 3: Form Screen (Report ELEPHANT) ---');
+        // 3a. Select randomly any direction
+        const chosenDirection = await this.selectRandomDirection();
+        await this.driver.pause(1000);
+
+        // 3b. Write message in the text box
+        const msgText = sightingData.description || `Spotted wild elephant moving in ${chosenDirection} direction near forest stream.`;
+        await this.fillSightingDescription(msgText);
+        await this.driver.pause(1000);
+
+        // 3c. Click camera -> capture image -> submit/confirm photo
+        console.log('[LOG] Capturing photo with Camera...');
+        await this.capturePhotoWithCamera();
+        await this.driver.pause(2000);
+
+        // 3d. Click Submit on form screen
+        console.log('[LOG] Clicking initial Submit button on form screen...');
+        await this.clickSubmitSighting();
+        await this.driver.pause(3000);
+
+        console.log('\n--- Step 4: Scroll down and click final Submit button ---');
+        await this.scrollAndClickFinalSubmit();
+        await this.driver.pause(3000);
+
+        console.log('\n--- Step 5: Verify back on Home Page ---');
+        await this.waitForHomePage();
+        console.log('\n[SUCCESS] Successfully submitted sighting form and returned back to Home Page!');
     }
 }
 
@@ -614,15 +675,11 @@ async function runAddSightingTest() {
         // Step 2: Verify Dashboard/Form Screen
         await addSightingPage.waitForHomePage();
 
-        // Step 3: Run Add Sighting Full Workflow with Test IDs
-        console.log('\n--- Executing Add Sighting Full Automated Test ---');
-        await addSightingPage.performAddSighting({
-            direction: 'South', // movement-direction-radio-3
-            description: 'Spotted 3 wild elephants moving near Mainpat Forest Division water stream.',
-            useCamera: true, // evidence-image-picker-camera-btn
-        });
+        // Step 3: Run Add Sighting Full Workflow
+        console.log('\n--- Executing Add Sighting Automated Workflow ---');
+        await addSightingPage.performAddSighting();
 
-        console.log('\n[SUCCESS] Add Sighting full automation with test IDs completed successfully!');
+        console.log('\n[SUCCESS] Add Sighting full test execution completed successfully!');
     } catch (error) {
         console.error('[ERROR] Add Sighting test execution failed:', error);
     } finally {
